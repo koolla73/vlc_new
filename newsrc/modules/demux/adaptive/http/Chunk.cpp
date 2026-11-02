@@ -386,8 +386,10 @@ void HTTPChunkBufferedSource::release()
     avail.signal();
 }
 
-void HTTPChunkBufferedSource::bufferize(size_t readsize)
+void HTTPChunkBufferedSource::bufferize()
 {
+    size_t readsize = contentLength;
+
     {
         mutex_locker locker {lock};
         if(!prepare())
@@ -397,6 +399,8 @@ void HTTPChunkBufferedSource::bufferize(size_t readsize)
             avail.signal();
             return;
         }
+
+        readsize = contentLength;
 
         if(contentLength && readsize > contentLength - buffered)
             readsize = contentLength - buffered;
