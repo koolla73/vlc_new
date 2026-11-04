@@ -137,8 +137,10 @@ uint64_t AbstractChunk::getStartByteInFile() const
 block_t * AbstractChunk::doRead(size_t size, bool b_block)
 {
     writeToLog("AbstractChunk::doRead called.");
-    if(!source)
+    if(!source) {
+        writeToLog("AbstractChunk::doRead has no source.");
         return nullptr;
+    }
 
     block_t *block = (b_block) ? source->readBlock() : source->read(size);
     if(block)
@@ -150,6 +152,7 @@ block_t * AbstractChunk::doRead(size_t size, bool b_block)
         block->i_flags &= ~BLOCK_FLAG_HEADER;
     }
 
+    writeToLog("AbstractChunk::doRead finished.");
     return block;
 }
 
@@ -230,12 +233,14 @@ block_t * HTTPChunkSource::read(size_t readsize)
     if(!prepare())
     {
         eof = true;
+        writeToLog("HTTPChunkSource::read prepare failed.");
         return nullptr;
     }
 
     if(consumed == contentLength && consumed > 0)
     {
         eof = true;
+        writeToLog("HTTPChunkSource::read consumed everything.");
         return nullptr;
     }
 
@@ -246,6 +251,7 @@ block_t * HTTPChunkSource::read(size_t readsize)
     if(!p_block)
     {
         eof = true;
+        writeToLog("HTTPChunkSource::read can't allocate block.");
         return nullptr;
     }
 
@@ -276,6 +282,7 @@ block_t * HTTPChunkSource::read(size_t readsize)
         }
     }
 
+    writeToLog("HTTPChunkSource::read finished.");
     return p_block;
 }
 
@@ -306,11 +313,15 @@ void HTTPChunkSource::setIdentifier(const std::string &s, const BytesRange &r)
 bool HTTPChunkSource::prepare()
 {
     writeToLog("HTTPChunkSource::prepare called.");
-    if(prepared)
+    if(prepared) {
+        writeToLog("HTTPChunkSource::prepare already prepared.");
         return true;
+    }
 
-    if(!connManager)
+    if(!connManager) {
+        writeToLog("HTTPChunkSource::prepare no connManager.");
         return false;
+    }
 
     ConnectionParams connparams = params; /* can be changed on 301 */
 
@@ -345,9 +356,11 @@ bool HTTPChunkSource::prepare()
         contentLength = connection->getContentLength();
         prepared = true;
         responseTime = vlc_tick_now();
+        writeToLog("HTTPChunkSource::prepare succeeded.");
         return true;
     }
 
+    writeToLog("HTTPChunkSource::prepare failed.");
     return false;
 }
 
@@ -422,6 +435,7 @@ void HTTPChunkBufferedSource::bufferize(size_t readsize)
             done = true;
             eof = true;
             avail.signal();
+            writeToLog("HTTPChunkBufferedSource::bufferize prepare failed.");
             return;
         }
 
@@ -436,6 +450,7 @@ void HTTPChunkBufferedSource::bufferize(size_t readsize)
     if(!p_block)
     {
         eof = true;
+        writeToLog("HTTPChunkBufferedSource::bufferize could not allocate block.");
         return;
     }
 
@@ -486,6 +501,8 @@ void HTTPChunkBufferedSource::bufferize(size_t readsize)
         connManager->updateDownloadRate(sourceid, rate.size,
                                         rate.time, rate.latency);
     }
+
+    writeToLog("HTTPChunkBufferedSource::bufferize finished.");
 }
 
 bool HTTPChunkBufferedSource::hasMoreData() const
@@ -518,6 +535,7 @@ block_t * HTTPChunkBufferedSource::readBlock()
         if(!eof)
             p_block = block_Alloc(0);
         eof = true;
+        writeToLog("HTTPChunkBufferedSource::readBlock no p_read.");
         return p_block;
     }
 
@@ -529,6 +547,7 @@ block_t * HTTPChunkBufferedSource::readBlock()
     if(p_read == nullptr && done)
         eof = true;
 
+    writeToLog("HTTPChunkBufferedSource::readBlock finished.");
     return p_block;
 }
 
@@ -544,6 +563,7 @@ block_t * HTTPChunkBufferedSource::read(size_t readsize)
     if(!readsize || (buffered == consumed) || !(p_block = block_Alloc(readsize)) )
     {
         eof = true;
+        writeToLog("HTTPChunkBufferedSource::read no readsize.");
         return nullptr;
     }
 
@@ -568,6 +588,7 @@ block_t * HTTPChunkBufferedSource::read(size_t readsize)
     if(copied < readsize)
         eof = true;
 
+    writeToLog("HTTPChunkBufferedSource::read finished.");
     return p_block;
 }
 
@@ -609,18 +630,23 @@ RequestStatus ProbeableChunk::getRequestStatus() const
 block_t * ProbeableChunk::readBlock()
 {
     writeToLog("ProbeableChunk::readBlock called.");
-    if(peekblock == nullptr)
+    if(peekblock == nullptr) {
+        writeToLog("ProbeableChunk::readBlock peekblock == nullptr.");
         return source->readBlock();
+    }
     block_t *b = peekblock;
     peekblock = nullptr;
+    writeToLog("ProbeableChunk::readBlock finished.");
     return b;
 }
 
 block_t * ProbeableChunk::read(size_t sz)
 {
     writeToLog("ProbeableChunk::read called.");
-    if(peekblock == nullptr)
+    if(peekblock == nullptr) {
+        writeToLog("ProbeableChunk::read peekblock == nullptr.");
         return source->read(sz);
+    }
     if(sz < peekblock->i_buffer)
     {
         block_t *b = block_Alloc(sz);
@@ -632,6 +658,7 @@ block_t * ProbeableChunk::read(size_t sz)
             peekblock->p_buffer += sz;
             peekblock->i_buffer -= sz;
         }
+        writeToLog("ProbeableChunk::read first finish.");
         return b;
     }
     else
@@ -648,8 +675,11 @@ block_t * ProbeableChunk::read(size_t sz)
         }
         block_t *b = peekblock;
         peekblock = nullptr;
+        writeToLog("ProbeableChunk::read second finish.");
         return b;
     }
+
+    writeToLog("ProbeableChunk::read finished.");
 }
 
 bool ProbeableChunk::hasMoreData() const
@@ -667,8 +697,11 @@ size_t ProbeableChunk::peek(const uint8_t **pp)
     writeToLog("ProbeableChunk::peek called.");
     if(!peekblock)
         peekblock = source->readBlock();
-    if(!peekblock)
+    if(!peekblock) {
+        writeToLog("ProbeableChunk::peek no peekblock.");
         return 0;
+    }
     *pp = peekblock->p_buffer;
+    writeToLog("ProbeableChunk::peek finished.");
     return peekblock->i_buffer;
 }
