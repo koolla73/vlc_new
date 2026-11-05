@@ -86,8 +86,9 @@ bool SegmentChunk::decrypt(block_t **pp_block)
 
 void SegmentChunk::onDownload(block_t **pp_block)
 {
+    block_t *p_block = *pp_block;
     const std::string type = source->getChunkType() == adaptive::http::ChunkType::Init ? "Init: " : source->getChunkType() == adaptive::http::ChunkType::Segment ? "Segment: " : "Unknown type: ";
-    writeToLog(type + std::to_string(*pp_block->i_buffer) + " bytes.");
+    writeToLog(type + std::to_string(p_block->i_buffer) + " bytes.");
     decrypt(pp_block);
 }
 
