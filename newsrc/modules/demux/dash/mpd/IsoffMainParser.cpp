@@ -438,7 +438,7 @@ void    IsoffMainParser::parseRepresentations (MPD *mpd, Node *adaptationSetNode
                 currentRepresentation->addAttribute(base);
         }
 
-        if(method != adaptive::encryption::CommonEncryption::Method::None)
+        if(static_cast<adaptive::encryption::CommonEncryption::Method>(method) != adaptive::encryption::CommonEncryption::Method::None)
         {
             adaptive::encryption::CommonEncryption encryption;
             encryption.method = static_cast<adaptive::encryption::CommonEncryption::Method>(method);
