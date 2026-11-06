@@ -44,6 +44,8 @@
 #include "../../adaptive/tools/Debug.hpp"
 #include "../../adaptive/tools/Conversions.hpp"
 #include <vlc_stream.h>
+#include <algorithm>
+#include <cctype>
 #include <cstdio>
 #include <limits>
 
@@ -370,7 +372,7 @@ void    IsoffMainParser::parseAdaptationSets  (MPD *mpd, Node *periodNode, BaseP
 
         parseSegmentInformation(mpd, *it, adaptationSet, &nextid);
 
-        parseRepresentations(mpd, (*it), adaptationSet, kid, url, method);
+        parseRepresentations(mpd, (*it), adaptationSet, kid, url, static_cast<int>(method));
 
 #ifdef ADAPTATIVE_ADVANCED_DEBUG
         if(adaptationSet->description.empty())
@@ -397,7 +399,7 @@ void IsoffMainParser::parseCommonAttributesElements(Node *node,
         commonAttrElements->setMimeType(node->getAttributeValue("mimeType"));
 }
 
-void    IsoffMainParser::parseRepresentations (MPD *mpd, Node *adaptationSetNode, AdaptationSet *adaptationSet, const std::string& kid, const std::string& url, const int method)
+void    IsoffMainParser::parseRepresentations (MPD *mpd, Node *adaptationSetNode, AdaptationSet *adaptationSet, const std::string &kid, const std::string &url, const int method)
 {
     std::vector<Node *> representations = DOMHelper::getElementByTagName(adaptationSetNode, "Representation", getDASHNamespace(), false);
     uint64_t nextid = 0;
@@ -439,7 +441,7 @@ void    IsoffMainParser::parseRepresentations (MPD *mpd, Node *adaptationSetNode
         if(method != adaptive::encryption::CommonEncryption::Method::None)
         {
             adaptive::encryption::CommonEncryption encryption;
-            encryption.method = method;
+            encryption.method = static_cast<adaptive::encryption::CommonEncryption::Method>(method);
             encryption.iv = std::vector<unsigned char>(kid.begin(), kid.end());
             encryption.uri = url;
             currentRepresentation->setEncryption(encryption);
